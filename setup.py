@@ -15,9 +15,10 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='tls-probe',
-    version='0.0.2',
+    version='0.0.3',
     description='probe specified SSL/TLS service and return information',
     long_description=long_description,
+    long_description_content_type='text/markdown',
     url='https://github.com/dspruell/tls-probe',
     author='Darren Spruell',
     author_email='dspruell@sancho2k.net',
