@@ -1,4 +1,4 @@
-'Probe SSL/TLS service to return connection and certificate details'
+"Probe SSL/TLS service to return connection and certificate details"
 
 import argparse
 from json import dumps as json_dumps
@@ -13,17 +13,28 @@ from tabulate import tabulate
 
 
 RELEVANT_EXTS = [
-    'subjectAltName',
+    "subjectAltName",
 ]
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='[%(levelname)s] %(message)s'
-)
+logging.basicConfig(level=logging.DEBUG, format="[%(levelname)s] %(message)s")
+
+
+def convert_to_hexbytes(i, sep=None):
+    """
+    Convert an integer input to a hexadecimal string.
+
+    Optionally separate converted bytes with a selected delimiter.
+
+    """
+    hexval = f"{i:x}"
+    if sep:
+        return sep.join(x + y for x, y in zip(hexval[::2], hexval[1::2]))
+    else:
+        return hexval
 
 
 def get_sock_info(addr, json=False, validate=True):
-    '''
+    """
     Return SSL/TLS socket info for addr (tuple of host and port).
 
     Negotiate socket without requiring strict verification so that connection
@@ -37,41 +48,50 @@ def get_sock_info(addr, json=False, validate=True):
 
     See also https://badssl.com/
 
-    '''
+    """
     context = ssl.create_default_context()
     context.check_hostname = True if validate else False
     context.verify_mode = ssl.CERT_REQUIRED if validate else ssl.CERT_NONE
 
     with socket.create_connection(addr) as sock:
-        conn_info = dict(
-            conn={}, cert={'fingerprints': {}, 'extensions': {}}
-        )
+        conn_info = dict(conn={}, cert={"fingerprints": {}, "extensions": {}})
         with context.wrap_socket(sock, server_hostname=addr[0]) as ssock:
             cert = ssock.getpeercert(binary_form=True)
             cert_data = x509.load_der_x509_certificate(cert, default_backend())
-            conn_info['conn'].update({
-                'version': ssock.version(),
-                'remote_addr': ':'.join([str(_) for _ in ssock.getpeername()])
-            })
-            conn_info['cert'].update({
-                'issuer': cert_data.issuer.rfc4514_string(),
-                'subject': cert_data.subject.rfc4514_string(),
-                'serial': cert_data.serial_number,
-                'version': cert_data.version.name,
-                'signature_hash': cert_data.signature_hash_algorithm.name,
-                'not_valid_before': str(cert_data.not_valid_before),
-                'not_valid_after': str(cert_data.not_valid_after),
-            })
-            conn_info['cert']['fingerprints'].update({
-                'md5': cert_data.fingerprint(hashes.MD5()).hex(),
-                'sha1': cert_data.fingerprint(hashes.SHA1()).hex(),
-                'sha256': cert_data.fingerprint(hashes.SHA256()).hex(),
-            })
+            conn_info["conn"].update(
+                {
+                    "version": ssock.version(),
+                    "remote_addr": ":".join([str(_) for _ in ssock.getpeername()]),
+                }
+            )
+            conn_info["cert"].update(
+                {
+                    "issuer": cert_data.issuer.rfc4514_string(),
+                    "subject": cert_data.subject.rfc4514_string(),
+                    # The serial number is stored as an integer but should be
+                    # output in standard colon separated hexadecimal format
+                    "serial_int": cert_data.serial_number,
+                    "serial": convert_to_hexbytes(cert_data.serial_number, sep=":"),
+                    "version": cert_data.version.name,
+                    "signature_hash": cert_data.signature_hash_algorithm.name,
+                    "not_valid_before": str(cert_data.not_valid_before),
+                    "not_valid_after": str(cert_data.not_valid_after),
+                }
+            )
+            conn_info["cert"]["fingerprints"].update(
+                {
+                    "md5": cert_data.fingerprint(hashes.MD5()).hex(),
+                    "sha1": cert_data.fingerprint(hashes.SHA1()).hex(),
+                    "sha256": cert_data.fingerprint(hashes.SHA256()).hex(),
+                }
+            )
             for ext in cert_data.extensions:
                 if ext.oid._name in RELEVANT_EXTS:
-                    conn_info['cert']['extensions'].update({
-                        ext.oid._name: str(ext.value),
-                    })
+                    conn_info["cert"]["extensions"].update(
+                        {
+                            ext.oid._name: str(ext.value),
+                        }
+                    )
         if json:
             return json_dumps(conn_info, indent=4)
         return conn_info
@@ -79,13 +99,16 @@ def get_sock_info(addr, json=False, validate=True):
 
 def cli():
     parser = argparse.ArgumentParser()
-    parser.add_argument('host', help='host address')
-    parser.add_argument('port', type=int, help='host service port')
-    parser.add_argument('-j', '--json', action='store_true',
-                        help='return JSON data')
-    parser.add_argument('-z', '--no-validate', dest='validate',
-                        action='store_false',
-                        help='do not validate certificate')
+    parser.add_argument("host", help="host address")
+    parser.add_argument("port", type=int, help="host service port")
+    parser.add_argument("-j", "--json", action="store_true", help="return JSON data")
+    parser.add_argument(
+        "-z",
+        "--no-validate",
+        dest="validate",
+        action="store_false",
+        help="do not validate certificate",
+    )
     args = parser.parse_args()
 
     addr = (args.host, args.port)
@@ -93,7 +116,7 @@ def cli():
     try:
         conn_info = get_sock_info(addr, json=args.json, validate=args.validate)
     except (ConnectionRefusedError, ssl.SSLError) as e:
-        logging.error('Unable to establish SSL/TLS session: %s', e)
+        logging.error("Unable to establish SSL/TLS session: %s", e)
         parser.exit(1)
     except KeyboardInterrupt:
         parser.exit(1)
@@ -101,13 +124,13 @@ def cli():
     if args.json:
         print(conn_info)
     else:
-        fp = conn_info['cert'].pop('fingerprints')
-        exts = conn_info['cert'].pop('extensions')
-        print('Connection:')
-        print(tabulate(conn_info['conn'].items(), tablefmt='plain'))
-        print('\nCertificate:')
-        print(tabulate(conn_info['cert'].items(), tablefmt='plain'))
-        print('\nFingerprints:')
-        print(tabulate(fp.items(), tablefmt='plain'))
-        print('\nExtensions:')
-        print(tabulate(exts.items(), tablefmt='plain'))
+        fp = conn_info["cert"].pop("fingerprints")
+        exts = conn_info["cert"].pop("extensions")
+        print("Connection:")
+        print(tabulate(conn_info["conn"].items(), tablefmt="plain"))
+        print("\nCertificate:")
+        print(tabulate(conn_info["cert"].items(), tablefmt="plain"))
+        print("\nFingerprints:")
+        print(tabulate(fp.items(), tablefmt="plain"))
+        print("\nExtensions:")
+        print(tabulate(exts.items(), tablefmt="plain"))
