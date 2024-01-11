@@ -9,21 +9,18 @@ Also provides command line frontend (`tls-probe`) to dump information in
 human-readable format.
 
 ## Installation
-
-Install from [PyPI](https://test.pypi.org/project/tls-probe/).
-Use Python 3 and a virtualenv. 
+Use Python 3 and a virtual environment. It's recommended to use
+[pipx](https://pypa.github.io/pipx/) for easy setup and isolation:
 
 ```
-mkdir -p ~/venv.d
-python3 -mvenv ~/venv.d/tls_probe
-~/venv.d/tls_probe/bin/pip install tls-probe
+pipx install tls-probe
 ```
 
 ## Usage
 Given an address (hostname or IP address) and port, a connection to the
 specified service is made, a SSL/TLS socket is established, and details are
 returned to the caller. This includes information about the connection as well
-as some details from the x.509 certificate, if one is served.
+as details from the X.509 certificate, if one is served.
 
 For example:
 
@@ -57,5 +54,5 @@ By default, the tool validates certificates sent by the remote service and
 certificate validation errors are raised. This may be changed by using the
 `-z/--no-validate` option.
 
-Full usage details are found in the `--help/-h` output to the command line
+Full usage details are found in the `--help` output to the command line
 utility.
