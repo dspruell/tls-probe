@@ -15,7 +15,7 @@ with open(path.join(here, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="tls-probe",
-    version="1.0.0",
+    version="1.1.0",
     description="probe specified SSL/TLS service and return information",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -26,8 +26,8 @@ setup(
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         # 'Development Status :: 3 - Alpha',
-        "Development Status :: 4 - Beta",
-        # 'Development Status :: 5 - Production/Stable',
+        # "Development Status :: 4 - Beta",
+        'Development Status :: 5 - Production/Stable',
         # 'Development Status :: 6 - Mature',
         "Environment :: Console",
         "Intended Audience :: Information Technology",

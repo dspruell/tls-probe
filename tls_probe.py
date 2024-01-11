@@ -1,15 +1,19 @@
-"Probe SSL/TLS service to return connection and certificate details"
+"""Probe SSL/TLS service to return connection and certificate details."""
 
 import argparse
-from json import dumps as json_dumps
 import logging
 import socket
 import ssl
+from importlib.metadata import version
+from json import dumps as json_dumps
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from tabulate import tabulate
+
+__application_name__ = "tls-probe"
+__version__ = version(__application_name__)
 
 
 RELEVANT_EXTS = [
@@ -61,7 +65,9 @@ def get_sock_info(addr, json=False, validate=True):
             conn_info["conn"].update(
                 {
                     "version": ssock.version(),
-                    "remote_addr": ":".join([str(_) for _ in ssock.getpeername()]),
+                    "remote_addr": ":".join(
+                        [str(_) for _ in ssock.getpeername()]
+                    ),
                 }
             )
             conn_info["cert"].update(
@@ -71,7 +77,9 @@ def get_sock_info(addr, json=False, validate=True):
                     # The serial number is stored as an integer but should be
                     # output in standard colon separated hexadecimal format
                     "serial_int": cert_data.serial_number,
-                    "serial": convert_to_hexbytes(cert_data.serial_number, sep=":"),
+                    "serial": convert_to_hexbytes(
+                        cert_data.serial_number, sep=":"
+                    ),
                     "version": cert_data.version.name,
                     "signature_hash": cert_data.signature_hash_algorithm.name,
                     "not_valid_before": str(cert_data.not_valid_before),
@@ -101,7 +109,9 @@ def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument("host", help="host address")
     parser.add_argument("port", type=int, help="host service port")
-    parser.add_argument("-j", "--json", action="store_true", help="return JSON data")
+    parser.add_argument(
+        "-j", "--json", action="store_true", help="return JSON data"
+    )
     parser.add_argument(
         "-z",
         "--no-validate",
@@ -109,6 +119,14 @@ def cli():
         action="store_false",
         help="do not validate certificate",
     )
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version=__version__,
+        help="print package version",
+    )
+
     args = parser.parse_args()
 
     addr = (args.host, args.port)
