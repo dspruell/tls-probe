@@ -16,6 +16,9 @@ __application_name__ = "tls-probe"
 __version__ = version(__application_name__)
 
 
+# Default socket (connection) timeout, in seconds
+DEFAULT_SOCKET_TIMEOUT = 30
+# Certificate extensions to render in output
 RELEVANT_EXTS = [
     "subjectAltName",
 ]
@@ -37,13 +40,13 @@ def convert_to_hexbytes(i, sep=None):
         return hexval
 
 
-def get_sock_info(addr, json=False, validate=True):
+def get_sock_info(addr, timeout=None, json=False, validate=True):
     """
-    Return SSL/TLS socket info for addr (tuple of host and port).
+    Return SSL/TLS socket info for addr (a tuple of host and port).
 
-    Negotiate socket without requiring strict verification so that connection
-    can be established and certificate data collected even in cases where
-    certificate verification fails.
+    Negotiate socket while giving the option to drop strict certificate
+    validation so that connections can be established and certificate data
+    collected even in cases where certificate verification fails.
 
     XXX Sample endpoints for testing:
     - valid:   content.portal.jask.ai:443
@@ -57,7 +60,7 @@ def get_sock_info(addr, json=False, validate=True):
     context.check_hostname = True if validate else False
     context.verify_mode = ssl.CERT_REQUIRED if validate else ssl.CERT_NONE
 
-    with socket.create_connection(addr) as sock:
+    with socket.create_connection(addr, timeout=timeout) as sock:
         conn_info = dict(conn={}, cert={"fingerprints": {}, "extensions": {}})
         with context.wrap_socket(sock, server_hostname=addr[0]) as ssock:
             cert = ssock.getpeercert(binary_form=True)
@@ -82,8 +85,8 @@ def get_sock_info(addr, json=False, validate=True):
                     ),
                     "version": cert_data.version.name,
                     "signature_hash": cert_data.signature_hash_algorithm.name,
-                    "not_valid_before": str(cert_data.not_valid_before),
-                    "not_valid_after": str(cert_data.not_valid_after),
+                    "not_valid_before": str(cert_data.not_valid_before_utc),
+                    "not_valid_after": str(cert_data.not_valid_after_utc),
                 }
             )
             conn_info["cert"]["fingerprints"].update(
@@ -120,6 +123,13 @@ def cli():
         help="do not validate certificate",
     )
     parser.add_argument(
+        "-t",
+        "--timeout",
+        type=float,
+        default=DEFAULT_SOCKET_TIMEOUT,
+        help="set connection socket timeout in seconds (default: %(default)s)",
+    )
+    parser.add_argument(
         "-V",
         "--version",
         action="version",
@@ -132,8 +142,10 @@ def cli():
     addr = (args.host, args.port)
 
     try:
-        conn_info = get_sock_info(addr, json=args.json, validate=args.validate)
-    except (ConnectionRefusedError, ssl.SSLError) as e:
+        conn_info = get_sock_info(
+            addr, timeout=args.timeout, json=args.json, validate=args.validate
+        )
+    except (TimeoutError, ConnectionRefusedError, ssl.SSLError) as e:
         logging.error("Unable to establish SSL/TLS session: %s", e)
         parser.exit(1)
     except KeyboardInterrupt:
