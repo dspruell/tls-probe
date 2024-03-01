@@ -82,8 +82,8 @@ def get_sock_info(addr, json=False, validate=True):
                     ),
                     "version": cert_data.version.name,
                     "signature_hash": cert_data.signature_hash_algorithm.name,
-                    "not_valid_before": str(cert_data.not_valid_before),
-                    "not_valid_after": str(cert_data.not_valid_after),
+                    "not_valid_before": str(cert_data.not_valid_before_utc),
+                    "not_valid_after": str(cert_data.not_valid_after_utc),
                 }
             )
             conn_info["cert"]["fingerprints"].update(
