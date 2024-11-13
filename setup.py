@@ -15,7 +15,7 @@ with open(path.join(here, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="tls-probe",
-    version="1.1.1",
+    version="1.2.0",
     description="probe specified SSL/TLS service and return information",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -41,7 +41,10 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        "cryptography",
+        # https://cryptography.io/en/latest/changelog/#v42-0-0
+        # Required to ensure support for timezone-aware properties
+        # not_valid_before_utc and not_valid_after_utc
+        "cryptography >= 42",
         "tabulate",
     ],
     entry_points={
