@@ -10,6 +10,7 @@ from json import dumps as json_dumps
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
+from jarm.scanner.scanner import Scanner
 from tabulate import tabulate
 
 __application_name__ = "tls-probe"
@@ -23,7 +24,7 @@ RELEVANT_EXTS = [
     "subjectAltName",
 ]
 
-logging.basicConfig(level=logging.DEBUG, format="[%(levelname)s] %(message)s")
+logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
 
 def convert_to_hexbytes(i, sep=None):
@@ -31,7 +32,6 @@ def convert_to_hexbytes(i, sep=None):
     Convert an integer input to a hexadecimal string.
 
     Optionally separate converted bytes with a selected delimiter.
-
     """
     hexval = f"{i:x}"
     if sep:
@@ -40,21 +40,23 @@ def convert_to_hexbytes(i, sep=None):
         return hexval
 
 
+def get_jarm_fingerprint(addr, timeout=None):
+    "Return JARM fingerprint for addr (a tuple of host and port)."
+    kwargs = {}
+    if timeout is not None:
+        kwargs.update({"timeout": timeout})
+    return Scanner.scan(*addr, **kwargs)
+
+
 def get_sock_info(addr, timeout=None, json=False, validate=True):
     """
     Return SSL/TLS socket info for addr (a tuple of host and port).
 
     Negotiate socket while giving the option to drop strict certificate
     validation so that connections can be established and certificate data
-    collected even in cases where certificate verification fails.
-
-    XXX Sample endpoints for testing:
-    - valid:   content.portal.jask.ai:443
-    - valid:   www.example.com:443
-    - invalid: 40.85.147.123:3389
+    collected even in cases where verification fails.
 
     See also https://badssl.com/
-
     """
     context = ssl.create_default_context()
     context.check_hostname = True if validate else False
@@ -65,12 +67,14 @@ def get_sock_info(addr, timeout=None, json=False, validate=True):
         with context.wrap_socket(sock, server_hostname=addr[0]) as ssock:
             cert = ssock.getpeercert(binary_form=True)
             cert_data = x509.load_der_x509_certificate(cert, default_backend())
+            jarm_data = get_jarm_fingerprint(addr, timeout=timeout)
             conn_info["conn"].update(
                 {
                     "version": ssock.version(),
                     "remote_addr": ":".join(
                         [str(_) for _ in ssock.getpeername()]
                     ),
+                    "jarm": jarm_data[0],
                 }
             )
             conn_info["cert"].update(

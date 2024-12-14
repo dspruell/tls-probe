@@ -15,7 +15,7 @@ with open(path.join(here, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="tls-probe",
-    version="1.2.0",
+    version="1.3.0",
     description="probe specified SSL/TLS service and return information",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -45,6 +45,7 @@ setup(
         # Required to ensure support for timezone-aware properties
         # not_valid_before_utc and not_valid_after_utc
         "cryptography >= 42",
+        "pyjarm <= 0.1.0",
         "tabulate",
     ],
     entry_points={
